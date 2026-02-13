@@ -263,6 +263,14 @@ func EnabledListModels(c *gin.Context) {
 
 func RetrieveModel(c *gin.Context, modelType int) {
 	modelId := c.Param("model")
+	if _, ok := openAIModelsMap[modelId]; !ok {
+		// Try normalized name (e.g., claude-opus-4-6@default -> claude-opus-4-6)
+		if normalized := ratio_setting.FormatMatchingModelName(modelId); normalized != modelId {
+			if _, ok := openAIModelsMap[normalized]; ok {
+				modelId = normalized
+			}
+		}
+	}
 	if aiModel, ok := openAIModelsMap[modelId]; ok {
 		switch modelType {
 		case constant.ChannelTypeAnthropic:

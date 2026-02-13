@@ -654,6 +654,11 @@ func GetCompletionRatioCopy() map[string]float64 {
 
 // 转换模型名，减少渠道必须配置各种带参数模型
 func FormatMatchingModelName(name string) string {
+	// Strip @suffix from model names (e.g., claude-opus-4-6@default -> claude-opus-4-6)
+	// Claude Code appends @default or @version to model names
+	if idx := strings.Index(name, "@"); idx > 0 {
+		name = name[:idx]
+	}
 
 	if strings.HasPrefix(name, "gemini-2.5-flash-lite") {
 		name = handleThinkingBudgetModel(name, "gemini-2.5-flash-lite", "gemini-2.5-flash-lite-thinking-*")

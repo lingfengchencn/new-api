@@ -47,6 +47,15 @@ var claudeModelMap = map[string]string{
 
 const anthropicVersion = "vertex-2023-10-16"
 
+// stripModelVersionSuffix removes @suffix from model names
+// (e.g., claude-opus-4-6@default -> claude-opus-4-6)
+func stripModelVersionSuffix(name string) string {
+	if idx := strings.Index(name, "@"); idx > 0 {
+		return name[:idx]
+	}
+	return name
+}
+
 type Adaptor struct {
 	RequestMode        int
 	AccountCredentials Credentials
@@ -91,10 +100,11 @@ func removeFunctionResponseID(request *dto.GeminiChatRequest) {
 }
 
 func (a *Adaptor) ConvertClaudeRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.ClaudeRequest) (any, error) {
-	if v, ok := claudeModelMap[info.UpstreamModelName]; ok {
+	upstreamModel := stripModelVersionSuffix(info.UpstreamModelName)
+	if v, ok := claudeModelMap[upstreamModel]; ok {
 		c.Set("request_model", v)
 	} else {
-		c.Set("request_model", request.Model)
+		c.Set("request_model", upstreamModel)
 	}
 	vertexClaudeReq := copyRequest(request, anthropicVersion)
 	return vertexClaudeReq, nil
@@ -237,8 +247,9 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 		} else {
 			suffix = "rawPredict"
 		}
-		model := info.UpstreamModelName
-		if v, ok := claudeModelMap[info.UpstreamModelName]; ok {
+		upstreamModel := stripModelVersionSuffix(info.UpstreamModelName)
+		model := upstreamModel
+		if v, ok := claudeModelMap[upstreamModel]; ok {
 			model = v
 		}
 		return a.getRequestUrl(info, model, suffix)
@@ -329,6 +340,7 @@ func (a *Adaptor) ConvertOpenAIRequest(c *gin.Context, info *relaycommon.RelayIn
 		if err != nil {
 			return nil, err
 		}
+		claudeReq.Model = stripModelVersionSuffix(claudeReq.Model)
 		vertexClaudeReq := copyRequest(claudeReq, anthropicVersion)
 		c.Set("request_model", claudeReq.Model)
 		info.UpstreamModelName = claudeReq.Model
